@@ -27,7 +27,11 @@ val t17 = eval(Map(), Str("test"))
 val t18 = eval(Map() + ("x" -> NumV(5)), Plus(Let("x", Num(3), Plus(Var("x"), Num(7))), Var("x")))
 val t19 = eval(Map(), First(Pair(Num(42), Num(27))))
 val t20 = eval(Map(), Num(777))
+val fxPlus1 = Apply(Var("f"),Plus(Var("x"),Num(1)))
+val ifThEl = IfThenElse(Eq(Var("x"),Num(3)),Var("x"),fxPlus1)
+eval(Map(), Apply( Rec("f","x",IntTy,IntTy, ifThEl ), Num(1) ) )
 
+// NOTE: Fellow Student Antonios and I collaborated
 
 object Assn2 {
   type Variable = String
@@ -144,9 +148,27 @@ object Assn2 {
     }
 
     def eq(v1: Value, v2: Value): Value = (v1, v2) match {
-      case (NumV(v1), NumV(v2)) if NumV(v1) == NumV(v2)  => BoolV(true)
-      case (BoolV(v1), BoolV(v2)) if BoolV(v1) == BoolV(v2)  => BoolV(true)
-      case (StringV(v1), StringV(v2)) if StringV(v1) == StringV(v2) => BoolV(true)
+      case (NumV(v1), NumV(v2)) =>
+        if (v1 == v2) {
+          BoolV(true)
+        }
+        else{
+          BoolV(false)
+        }
+      case (BoolV(v1), BoolV(v2)) =>
+        if (v1 == v2) {
+          BoolV(true)
+        }
+        else{
+          BoolV(false)
+        }
+      case (StringV(v1), StringV(v2)) =>
+        if (v1 == v2) {
+          BoolV(true)
+        }
+        else{
+          BoolV(false)
+        }
       case _ => sys.error ("Arguments are not equal.")
     }
 
@@ -204,11 +226,13 @@ object Assn2 {
     case Lambda(x, ty, e) => ClosureV(env, x, e)
     case Rec(f, x, tyx, ty, e) => RecV(env, f, x, e)
     case Apply(Lambda(x, ty, e), e2) => eval(env, Let(x, e2, e))
-    case Apply(Rec(f, x, tyx, ty, e), e2) => {
-      val recv = eval(env, Rec(f, x, tyx, ty, e))
-      val e2v = eval(env, e2)
-      val env2 = env + (x -> e2v) + (f -> recv)
-      eval(env2, e)
+    case Apply(e1, e2) => val e1v = eval(env, e1)
+      e1v match {
+      case (RecV(env0, f, x, e)) =>
+        val recv = e1v
+        val e2v = eval(env, e2)
+        val env2 = env + (x -> e2v) + (f -> recv)
+        eval(env2, e)
     }
     case _ => sys.error("Can't evaluate a non-handled case.")
   }
@@ -364,12 +388,14 @@ object Assn2 {
   def subst(e1: Expr, e2: Expr, x: Variable): Expr =
     e1 match {
       case Num(e) => Num(e)
+      case Bool(e) => Bool(e)
+      case Str(e) => Str(e)
       case Plus(t1, t2) => Plus(subst(t1, e2, x), subst(t2, e2, x))
       case Minus(t1, t2) => Minus(subst(t1, e2, x), subst(t2, e2, x))
       case Times(t1, t2) => Times(subst(t1, e2, x), subst(t2, e2, x))
       case IfThenElse(t0, t1, t2) => IfThenElse(subst(t0, e2, x), subst(t1, e2, x), subst(t2, e2, x))
       case Length(t0) => Length(subst(t0, e2, x))
-      case Index(t1,t2) => Index(subst(t1, e2, x), subst(t2, e2, x))
+      case Index(t1, t2) => Index(subst(t1, e2, x), subst(t2, e2, x))
       case Concat(t1, t2) => Concat(subst(t1, e2, x), subst(t2, e2, x))
       case Var(y) =>
         if (x == y) {
@@ -393,14 +419,34 @@ object Assn2 {
         val fresh_t2 = swap(t2, y, z);
         Let(z, subst(t1, e2, x), subst(fresh_t2, e2, x))
       }
-      case LetPair(y1, y2, t0, t1)  =>
+      case LetPair(y1, y2, t1, t2) => {
         val z1 = Gensym.gensym(y1);
         val z2 = Gensym.gensym(y2);
-        val fresh_t0 = swap(t0, y1, z1);
-        val fresh_t
-
-
-      case _ => sys.error("subst: todo")
+        val fresh_t1_1 = swap(t1, y1, z1);
+        val fresh_t1_2 = swap(fresh_t1_1, y2, z2);
+        LetPair(z1, z2, subst(t1, e2, x), subst(fresh_t1_2, e2, x))
+      }
+      case LetFun(f, y, ty, t1, t2) => {
+        val g = Gensym.gensym(f);
+        val z = Gensym.gensym(y);
+        val fresh_t1 = swap(t1, y, z);
+        val fresh_t2 = swap(t2, f, g);
+        LetFun(g, z, ty, subst(fresh_t1, e2, x), subst(fresh_t2, e2, x))
+      }
+      case LetRec(f, y, yty, ty, t1, t2) => {
+        val g = Gensym.gensym(f);
+        val z = Gensym.gensym(y);
+        val fresh_t1_1 = swap(t1, y, z);
+        val fresh_t1_2 = swap(fresh_t1_1, f, g)
+        val fresh_t2 = swap(t2, f, g);
+        LetRec(g, z, yty, ty, subst(fresh_t1_2, e2, x), subst(fresh_t2, e2, x))
+      }
+      case Pair(t1, t2) => Pair(subst(t1, e2, x), subst(t1, e2, x))
+      case First(t1) => First(subst(t1, e2, x))
+      case Second(t1) => Second(subst(t1, e2, x))
+      case Apply(t1, t2) => Apply(subst(t1, e2, x), subst(t2, e2, x))
+      case Eq(t1, t2) => Eq(subst(t1, e2, x), subst(t2, e2, x))
+      case _ => sys.error("Inputs to subst are incorrect.")
     }
 
 
@@ -414,8 +460,22 @@ object Assn2 {
     case Plus(e1, e2) => Plus(desugar(e1), desugar(e2))
     case Minus(e1, e2) => Minus(desugar(e1), desugar(e2))
     case Times(e1, e2) => Times(desugar(e1), desugar(e2))
+    case LetPair(x, y, e1, e2) => {
+       val p = Gensym.gensym(x);
+       Let(p, e1, subst(First(p), e2, x))
 
-    case _ => sys.error("desugar: todo")
+      /*var p = Gensym.gensym(x);
+      val p1 = First(p);
+      val p1 =
+      val e2_x = swap(e, x, First(p));
+      val e2_xy = subst(e2_x, Second(p), pair)
+      Let(p, e1_fresh, e2_xy)*/
+    }
+    case LetFun(f, x, ty, e1, e2) =>
+      Let(f, Lambda(x, ty, desugar(e1)), desugar(e2))
+    case LetRec(f, x, xty, ty, e1, e2) =>
+      Let(f, Rec(f,x,xty,ty,desugar(e1)), desugar(e2))
+    case _ => sys.error("Not a desugar case.")
 
   }
 }
