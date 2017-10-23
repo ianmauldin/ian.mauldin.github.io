@@ -475,17 +475,15 @@ object Assn2 {
     case Lambda(x, ty, e) => Lambda(x, ty, desugar(e))
     case Apply(e1, e2) => Apply(desugar(e1), desugar(e2))
     case Rec(f,x,tyx,ty,e) => Rec(f,x,tyx,ty,desugar(e))
-    //case LetPair(x, y, e1, e2) => {
-       //val p = Gensym.gensym(x);
-       //Let(p, e1, subst(First(p), e2, x))
-
-      /*var p = Gensym.gensym(x);
-      val p1 = First(p);
-      val p1 =
-      val e2_x = swap(e, x, First(p));
-      val e2_xy = subst(e2_x, Second(p), pair)
-      Let(p, e1_fresh, e2_xy)*/
-   // }
+    case LetPair(x, y, e1, e2) => {
+      val P = Gensym.gensym("p")
+      val env = Map() + ("p" -> e1)
+      val Pfirst = First(e1)
+      val Psecond = Second(e1)
+      val expX = Var("x")
+      val expY = Var("y")
+      Let(P, e1, subst(subst(e2, Pfirst, x), Psecond, y))
+    }
     case LetFun(f, x, ty, e1, e2) =>
       Let(f, Lambda(x, ty, desugar(e1)), desugar(e2))
     case LetRec(f, x, xty, ty, e1, e2) =>
