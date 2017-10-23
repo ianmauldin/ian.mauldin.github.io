@@ -225,15 +225,19 @@ object Assn2 {
     case Second(Pair(e1, e2)) => eval(env, e2) //NOT SURE
     case Lambda(x, ty, e) => ClosureV(env, x, e)
     case Rec(f, x, tyx, ty, e) => RecV(env, f, x, e)
-    case Apply(Lambda(x, ty, e), e2) => eval(env, Let(x, e2, e))
     case Apply(e1, e2) => val e1v = eval(env, e1)
       e1v match {
       case (RecV(env0, f, x, e)) =>
         val recv = e1v
         val e2v = eval(env, e2)
-        val env2 = env + (x -> e2v) + (f -> recv)
+        val env2 = env0 + (x -> e2v) + (f -> recv)
         eval(env2, e)
-    }
+      case (ClosureV(env0, x, e))  =>
+        val closev = e1v
+        val e2v = eval(env, e2)
+        val env2 = env0 + (x -> e2v)
+        eval(env2, e)
+      }
     case _ => sys.error("Can't evaluate a non-handled case.")
   }
 
