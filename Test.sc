@@ -460,9 +460,24 @@ object Assn2 {
     case Plus(e1, e2) => Plus(desugar(e1), desugar(e2))
     case Minus(e1, e2) => Minus(desugar(e1), desugar(e2))
     case Times(e1, e2) => Times(desugar(e1), desugar(e2))
-    case LetPair(x, y, e1, e2) => {
-       val p = Gensym.gensym(x);
-       Let(p, e1, subst(First(p), e2, x))
+    case Bool(b) => Bool(b)
+    case Eq(e1, e2) => Eq(desugar(e1), desugar(e2))
+    case IfThenElse(e, e1, e2) =>  IfThenElse(desugar(e), desugar(e1), desugar(e2))
+    case Str(s) => Str(s)
+    case Length(e) => Length(desugar(e))
+    case Index(e1, e2) => Index(desugar(e1), desugar(e2))
+    case Concat(e1, e2) => Concat(desugar(e1), desugar(e2))
+    case Var(x) => Var(x)
+    case Let(x, e1, e2) => Let(x, desugar(e1), desugar(e2))
+    case Pair(e1, e2) => Pair(desugar(e1), desugar(e2))
+    case First(e) => First(desugar(e))
+    case Second(e) => Second(desugar(e))
+    case Lambda(x, ty, e) => Lambda(x, ty, desugar(e))
+    case Apply(e1, e2) => Apply(desugar(e1), desugar(e2))
+    case Rec(f,x,tyx,ty,e) => Rec(f,x,tyx,ty,desugar(e))
+    //case LetPair(x, y, e1, e2) => {
+       //val p = Gensym.gensym(x);
+       //Let(p, e1, subst(First(p), e2, x))
 
       /*var p = Gensym.gensym(x);
       val p1 = First(p);
@@ -470,7 +485,7 @@ object Assn2 {
       val e2_x = swap(e, x, First(p));
       val e2_xy = subst(e2_x, Second(p), pair)
       Let(p, e1_fresh, e2_xy)*/
-    }
+   // }
     case LetFun(f, x, ty, e1, e2) =>
       Let(f, Lambda(x, ty, desugar(e1)), desugar(e2))
     case LetRec(f, x, xty, ty, e1, e2) =>
